@@ -1,38 +1,66 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
-from keras.models import load_model
-from keras.preprocessing import image
+from tensorflow.keras.models import load_model
+from tensorflow.keras.preprocessing import image
 import numpy as np
+import os
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Load your trained model
 MODEL_PATH = 'CoffeeBean_model.h5'
 model = load_model(MODEL_PATH)
 
+# Assume these are your categories based on the model's training
+CATEGORIES = ['Dark', 'Green', 'Light', 'Medium']
+
 def model_predict(img_path, model):
-    img = image.load_img(img_path, target_size=(224, 224))
-    x = image.img_to_array(img)
-    x = np.expand_dims(x, axis=0)
-    x = preprocess_input(x)
-    preds = model.predict(x)
-    return preds
+    IMG_SIZE = 50  # Target size
+    try:
+        # Load and resize the image
+        img = image.load_img(img_path, target_size=(IMG_SIZE, IMG_SIZE))
+        x = image.img_to_array(img)
+        # Normalize the image data
+        x = x / 255.0
+        # Reshape the image data for the model
+        x = np.expand_dims(x, axis=0)
+        preds = model.predict(x)
+        return preds, None
+    except Exception as e:
+        return None, str(e)
 
 @app.route('/')
 def index():
+    # Assuming you have an 'index.html' that contains the UI for uploading images
     return render_template('index.html')
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    if request.method == 'POST':
-        f = request.files['file']
-        basepath = os.path.dirname(__file__)
-        file_path = os.path.join(basepath, 'uploads', secure_filename(f.filename))
-        f.save(file_path)
-        preds = model_predict(file_path, model)
-        # Process your result here
-        result = "Prediction Result"
-        return result
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    file = request.files['file']
+    if file.filename.split('.')[-1].lower() not in ['jpg', 'jpeg', 'png']:
+        return jsonify({"error": "Invalid file format. Only jpg, jpeg, and png files are allowed."}), 400
+    
+    basepath = os.path.dirname(__file__)
+    temp_folder = 'temp_uploads'
+    os.makedirs(os.path.join(basepath, temp_folder), exist_ok=True)
+    file_path = os.path.join(basepath, temp_folder, secure_filename(file.filename))
+    file.save(file_path)
+
+    preds, error = model_predict(file_path, model)
+    os.remove(file_path)  # Clean up after prediction
+    
+    if preds is None:
+        return jsonify({"error": f"Prediction failed: {error}"}), 500
+
+    # Process the prediction to get the category with the highest probability
+    prediction_index = np.argmax(preds, axis=1)[0]  # Getting the index of the max probability
+    result = CATEGORIES[prediction_index]
+
+    return jsonify({"prediction": result})
 
 if __name__ == '__main__':
     app.run(debug=True)
