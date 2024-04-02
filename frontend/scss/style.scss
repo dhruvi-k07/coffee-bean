@@ -2541,6 +2541,9 @@ textarea.form-control {
   stroke-linecap: round;
 }
 
+.prediction-message {
+	font-size: 24px !important;
+}
 @keyframes loader-rotate {
   100% {
     transform: rotate(360deg);
