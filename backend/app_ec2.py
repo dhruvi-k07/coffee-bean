@@ -60,7 +60,7 @@ def predict():
     prediction_index = np.argmax(preds, axis=1)[0]
     result = CATEGORIES[prediction_index]
 
-    return jsonify({"prediction": result})
+    return jsonify({"prediction": result}), 200
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0')
