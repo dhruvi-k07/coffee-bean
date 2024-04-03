@@ -336,7 +336,7 @@ AOS.init({
       formData.append("file", file); // Match the key to your Flask endpoint's expected key
 
       // Modify the URL to match your Flask application's URL and endpoint
-      fetch("http://127.0.0.1:5000/predict", {
+      fetch("http://54.198.26.247:5000/predict", {
         method: "POST",
         body: formData,
       })
