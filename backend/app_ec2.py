@@ -34,7 +34,7 @@ def model_predict(img_path, model):
 
 @app.route('/')
 def index():
-    return render_template('Hello world')
+    return jsonify({"message": 'Hello world'})
 
 @app.route('/predict', methods=['POST'])
 def predict():
